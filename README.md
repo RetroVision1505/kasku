@@ -8,7 +8,7 @@ Status: **Tahap 1 (fondasi)**. Kerangka, tema, penyimpanan, ekspor/impor, dan PW
 
 1. Buat akun di github.com dan aktifkan 2FA.
 2. Klik **New repository**, beri nama (mis. `kasku`), pilih **Public**, lalu **Create repository**.
-3. Di halaman repo klik **uploading an existing file**, seret **isi folder ini** (index.html, manifest.json, sw.js, folder fonts dan icons), lalu **Commit changes**.
+3. Di halaman repo klik **uploading an existing file**, seret **isi folder ini** (semua file, tanpa folder), lalu **Commit changes**.
 4. Buka **Settings > Pages**. Pada *Build and deployment*, pilih **Deploy from a branch**, branch **main**, folder **/ (root)**, lalu **Save**.
 5. Tunggu 1 sampai 2 menit. Alamatnya: `https://NAMA-AKUN.github.io/kasku/`.
 6. Buka alamat itu di Chrome Android, ketuk menu ⋮, lalu **Instal aplikasi** (atau tombol **Pasang** di Pengaturan).

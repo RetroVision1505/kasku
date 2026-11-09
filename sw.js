@@ -1,12 +1,12 @@
 /* Service worker Kasku: aplikasi tetap terbuka saat offline.
    Strategi: tampilkan dari cache dulu, perbarui diam-diam di belakang.
    Versi baru terlihat pada pembukaan berikutnya. */
-const CACHE = 'kasku-shell-v2';
+const CACHE = 'kasku-shell-v3';
 const SHELL = [
   './', './index.html', './manifest.json',
-  './fonts/jakarta.woff2',
-  './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png',
-  './icons/apple-touch-icon.png', './icons/favicon.svg'
+  './jakarta.woff2',
+  './icon-192.png', './icon-512.png', './icon-maskable-512.png',
+  './apple-touch-icon.png', './favicon.svg'
 ];
 
 self.addEventListener('install', e => {
