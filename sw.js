@@ -1,7 +1,7 @@
 /* Service worker Kasku: aplikasi tetap terbuka saat offline.
    Strategi: tampilkan dari cache dulu, perbarui diam-diam di belakang.
    Versi baru terlihat pada pembukaan berikutnya. */
-const CACHE = 'kasku-shell-v3';
+const CACHE = 'kasku-shell-v5';
 const SHELL = [
   './', './index.html', './manifest.json',
   './jakarta.woff2',
