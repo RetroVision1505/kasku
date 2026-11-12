@@ -220,6 +220,15 @@ h1,h2,h3,p{margin:0}
   *,*::before,*::after{animation:none!important;transition:none!important}
 }
 
+/* ---------- Tahap 5: pencarian & poles ---------- */
+.srch{margin-top:18px}
+.srch input{width:100%;min-height:50px;padding:0 18px;border-radius:999px;border:2px solid transparent;background:var(--surface);color:var(--ink);font:600 15px var(--f);box-shadow:var(--card-shadow);-webkit-appearance:none;appearance:none}
+.srch input:focus{outline:none;border-color:var(--acc)}
+.srch input::placeholder{color:var(--muted);font-weight:500}
+.srch input::-webkit-search-cancel-button{-webkit-appearance:none}
+.chips.tfs{margin-top:12px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-inline:-20px;padding-inline:20px;scroll-padding-inline:20px}
+.chips.tfs::-webkit-scrollbar{display:none}
+.chips.tfs .pick{flex:none}
 /* ---------- Tahap 2: daftar, formulir, dompet ---------- */
 .lnk{text-decoration:none;color:var(--acc)}
 .empty .cta{margin-top:16px}
@@ -311,6 +320,33 @@ details.tbl th{color:var(--muted);font-weight:700}
 :root[data-theme="dark"] .mt-s b{color:#1B1038}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .mt-s b{color:#1B1038}}
 .panel .cta{margin-top:18px;width:100%}
+
+/* ---------- Tahap 4: goal & hutang ---------- */
+.mt.goal{--m:var(--acc)}
+.gc{display:block;width:100%;text-align:left;margin-bottom:12px;padding:16px 18px 15px;border-radius:28px;background:var(--surface);box-shadow:var(--card-shadow);font:inherit;color:inherit;border:0;cursor:pointer;transition:transform .12s}
+.gc:active{transform:scale(.985)}
+.gc span{display:block}
+.gc-h{display:flex!important;align-items:center;gap:12px}
+.gc-i{width:44px;height:44px;border-radius:16px;display:grid!important;place-items:center;font-size:22px;background:var(--acc-soft);flex:none}
+.gc-t{flex:1;min-width:0}
+.gc-n{font-size:16px;font-weight:800;letter-spacing:-.015em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gc-v{font-size:13.5px;font-weight:600;color:var(--muted);margin-top:1px}
+.gc-p{font-size:15px;font-weight:800;color:var(--ink)}
+.gc-b{height:10px!important;margin-top:12px;border-radius:999px;background:color-mix(in srgb,var(--m) 20%,var(--surface2));overflow:hidden}
+.gc-b i{display:block;height:100%;border-radius:999px;background:var(--m)}
+.gc-s{margin-top:8px;font-size:13px;font-weight:600;color:var(--muted)}
+.gc-s b{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;margin-right:6px;background:var(--m);color:#fff;font-size:11px;font-weight:800;vertical-align:1px}
+:root[data-theme="dark"] .gc-s b{color:#1B1038}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .gc-s b{color:#1B1038}}
+.bd{display:inline-block;margin-left:6px;padding:2px 9px;border-radius:999px;font-style:normal;font-size:11.5px;font-weight:800;background:var(--surface2);color:var(--muted);vertical-align:2px}
+.stack{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.stack .btn{width:100%;min-height:50px}
+.sumline{display:flex;justify-content:space-between;gap:12px;margin:0 0 14px;padding:14px 18px;border-radius:22px;background:var(--surface);box-shadow:var(--card-shadow);font-size:14px;font-weight:700;color:var(--muted)}
+.sumline b{color:var(--ink);font-weight:800}
+details.done{margin-top:6px}
+details.done summary{cursor:pointer;font-weight:700;color:var(--acc);min-height:40px;display:flex;align-items:center}
+.addbar{margin-top:6px}
+.addbar .btn{width:100%}
 </style>
 </head>
 <body>
@@ -344,7 +380,7 @@ details.tbl th{color:var(--muted);font-weight:700}
    Kasku: fondasi (Tahap 1) dengan tampilan "Lilac lembut".
    Skema data v1. Semua data hidup di localStorage perangkat ini.
    ===================================================================== */
-const APP = 'kasku', SCHEMA = 1, VERSION = '0.4.0';
+const APP = 'kasku', SCHEMA = 1, VERSION = '0.6.0';
 const KEY = 'ft:data', PREV = 'ft:prev', CORRUPT = 'ft:corrupt';
 const LISTS = ['wallets', 'categories', 'transactions', 'budgets', 'goals', 'debts'];
 
@@ -445,7 +481,7 @@ const CAT_EMOJI = ['🍜', '☕', '🛒', '🛍️', '🚌', '⛽', '🏠', '�
 
 /* ---------- state UI ---------- */
 const nowKey = () => ymd().slice(0, 7);
-const state = { plan: 'goal', persisted: null, installed: matchMedia('(display-mode: standalone)').matches, firstPaint: true, month: nowKey() };
+const state = { q: '', tf: 'all', plan: 'goal', persisted: null, installed: matchMedia('(display-mode: standalone)').matches, firstPaint: true, month: nowKey() };
 let deferredInstall = null;
 const tabNow = () => { const h = (location.hash || '').replace(/^#\/?/, ''); return TABS.some(t => t[0] === h) ? h : 'beranda'; };
 
@@ -472,6 +508,7 @@ function balances() {
     if (t.type === 'in') add(t.walletId, a);
     else if (t.type === 'out') add(t.walletId, -a);
     else if (t.type === 'transfer') { add(t.walletId, -a); add(t.toWalletId, a); }
+    else if (t.type === 'goal' || t.type === 'debt') add(t.walletId, t.flow === 'in' ? a : -a);
   }
   return m;
 }
@@ -573,6 +610,69 @@ function budgetHome() {
   return `<section class="sec"><div class="sec-head"><h2>Budget bulan ini</h2><a class="meta lnk" href="#/analisis">Lihat semua</a></div><div class="panel">${rows.map(meter).join('')}</div></section>`;
 }
 
+
+/* ---------- goal & hutang ---------- */
+const GOAL_EMOJI = ['🎯', '🏖️', '🏠', '🚗', '📱', '💻', '🎓', '💍', '🏥', '🛡️', '🎁', '✈️', '📚', '🐶', '👶', '💰'];
+const goalById = id => db.goals.find(g => g.id === id);
+const debtById = id => db.debts.find(d => d.id === id);
+function goalSaved(id, exceptTx) {
+  let s = 0;
+  for (const t of db.transactions) if (t.type === 'goal' && t.goalId === id && t.id !== exceptTx) s += (t.dir === 'deposit' ? 1 : -1) * amt(t);
+  return s;
+}
+function debtPaid(id, exceptTx) {
+  let s = 0;
+  for (const t of db.transactions) if (t.type === 'debt' && t.debtId === id && t.role === 'pay' && t.id !== exceptTx) s += amt(t);
+  return s;
+}
+function daysUntil(ds) {
+  const [y, m, d] = ds.split('-').map(Number), t0 = new Date(); t0.setHours(0, 0, 0, 0);
+  return Math.round((new Date(y, m - 1, d) - t0) / 864e5);
+}
+const fmtDate = ds => { const [y, m, d] = ds.split('-').map(Number); return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(y, m - 1, d)); };
+const validDate = ds => /^\d{4}-\d{2}-\d{2}$/.test(ds);
+function goalInfo(g) {
+  const saved = goalSaved(g.id), target = Number(g.target) || 0, pct = target > 0 ? saved / target : 0, rem = Math.max(0, target - saved);
+  let status = 'goal', label;
+  if (pct >= 1) { status = 'ok'; label = '<b aria-hidden="true">✓</b>Tercapai'; }
+  else if (g.deadline) {
+    const dd = daysUntil(g.deadline);
+    if (dd < 0) { status = 'bad'; label = `<b aria-hidden="true">×</b>Lewat target ${fmtDate(g.deadline)}, sisa ${rupiah(rem)}`; }
+    else { const months = Math.max(1, Math.ceil(dd / 30)); label = `Sisa ${rupiah(rem)} · perlu ${rupiah(Math.ceil(rem / months))} per bulan sampai ${fmtDate(g.deadline)}`; }
+  } else label = `Sisa ${rupiah(rem)}`;
+  return { saved, target, pct, rem, status, label };
+}
+function debtInfo(d) {
+  const total = Number(d.total) || 0, paid = debtPaid(d.id), rem = Math.max(0, total - paid), pct = total > 0 ? paid / total : 0;
+  let status = 'goal', label;
+  if (rem <= 0) { status = 'ok'; label = '<b aria-hidden="true">✓</b>Lunas'; }
+  else if (d.dueDate) {
+    const dd = daysUntil(d.dueDate);
+    if (dd < 0) { status = 'bad'; label = `<b aria-hidden="true">×</b>Lewat ${-dd} hari, sisa ${rupiah(rem)}`; }
+    else if (dd <= 7) { status = 'warn'; label = `<b aria-hidden="true">!</b>${dd === 0 ? 'Jatuh tempo hari ini' : `Jatuh tempo ${dd} hari lagi`}, sisa ${rupiah(rem)}`; }
+    else label = `Sisa ${rupiah(rem)} · jatuh tempo ${fmtDate(d.dueDate)}`;
+  } else label = `Sisa ${rupiah(rem)}`;
+  return { total, paid, rem, pct, status, label };
+}
+function gcard(action, id, icon, name, badge, valueText, info) {
+  const w = Math.min(100, Math.round(info.pct * 100));
+  return `<button class="gc mt ${info.status}" data-a="${action}" data-id="${esc(id)}"><span class="gc-h"><span class="gc-i" aria-hidden="true">${esc(icon)}</span><span class="gc-t"><span class="gc-n">${esc(name)}${badge ? `<em class="bd">${badge}</em>` : ''}</span><span class="gc-v">${valueText}</span></span><span class="gc-p">${Math.round(info.pct * 100)}%</span></span>
+    <span class="gc-b" role="img" aria-label="${Math.round(info.pct * 100)} persen"><i style="width:${w}%"></i></span><span class="gc-s">${info.label}</span></button>`;
+}
+function dueSoon() {
+  return db.debts.filter(d => { const i = debtInfo(d); return i.rem > 0 && d.dueDate && daysUntil(d.dueDate) <= 7; });
+}
+function linkRow(t) {
+  const w = wallet(t.walletId), wn = w ? w.name : 'Dompet dihapus'; let icon, title;
+  if (t.type === 'goal') { const g = goalById(t.goalId); icon = g ? g.icon : '🎯'; title = (t.dir === 'deposit' ? 'Setor ke ' : 'Tarik dari ') + (g ? g.name : 'goal'); }
+  else {
+    const d = debtById(t.debtId), owe = d && d.kind === 'owe', p = d ? d.party : '(dihapus)'; icon = '🤝';
+    title = t.role === 'start' ? (owe ? `Hutang dari ${p}` : `Pinjamkan ke ${p}`) : (owe ? `Bayar hutang ke ${p}` : `Terima dari ${p}`);
+  }
+  let sub = wn; if (t.note) sub += ` · ${t.note}`;
+  return `<button class="tx" data-a="tx-edit" data-id="${esc(t.id)}"><span class="ti t-tr" aria-hidden="true">${esc(icon)}</span><span class="tm"><span class="tn">${esc(title)}</span><span class="ts">${esc(sub)}</span></span><span class="ta">${t.flow === 'in' ? '+' : '−'}${rupiah(amt(t))}</span></button>`;
+}
+
 /* ---------- tampilan ---------- */
 const SOON = '<span class="soon">Segera hadir</span>';
 const empty = (emoji, tone, title, text, cta = SOON) =>
@@ -580,6 +680,7 @@ const empty = (emoji, tone, title, text, cta = SOON) =>
 const heroSizeClass = s => s.length > 13 ? 'sm' : s.length > 9 ? 'md' : '';
 
 function txRow(t) {
+  if (t.type === 'goal' || t.type === 'debt') return linkRow(t);
   const isT = t.type === 'transfer', c = category(t.categoryId), w = wallet(t.walletId), w2 = wallet(t.toWalletId);
   const icon = isT ? '🔄' : (c ? c.icon : '❔'), title = isT ? 'Transfer' : (c ? c.name : 'Tanpa kategori');
   const wn = w ? w.name : 'Dompet dihapus';
@@ -610,9 +711,11 @@ function viewBeranda() {
     ? `<div class="notice"><span><b>Penyimpanan tidak aktif.</b> Data hilang saat halaman ditutup.</span></div>`
     : needsBackup()
       ? `<div class="notice"><span><b>Saatnya cadangkan data.</b> ${n === null ? 'Belum pernah dicadangkan.' : `Terakhir ${n} hari lalu.`}</span><button class="btn small" data-a="export">Ekspor</button></div>` : '';
+  const ds = dueSoon();
+  const dueNote = ds.length ? `<div class="notice"><span><b>Jatuh tempo.</b> ${ds.length} hutang/piutang jatuh tempo dalam 7 hari atau sudah lewat.</span><button class="btn small" data-a="go-debt">Lihat</button></div>` : '';
   return `
   <header class="top"><p class="date">${esc(date)}</p><h1>${hi}! 👋</h1></header>
-  ${notice}
+  ${dueNote}${notice}
   <section class="hero ${state.firstPaint ? 'enter' : ''}" aria-labelledby="h-total">
     <p class="hero-label" id="h-total">Total saldo</p>
     <p class="hero-amount ${heroSizeClass(totalStr)}"><span class="cur">Rp</span><span class="num">${totalStr}</span></p>
@@ -625,20 +728,45 @@ function viewBeranda() {
   <section class="sec"><div class="sec-head"><h2>Transaksi terakhir</h2>${recent.length ? '<a class="meta lnk" href="#/transaksi">Lihat semua</a>' : ''}</div>
     ${recent.length ? `<div class="txl">${recent.map(txRow).join('')}</div>` : empty('🧾', 'w3', 'Belum ada transaksi', 'Catatan pemasukan dan pengeluaranmu akan muncul di sini.', db.wallets.length ? '<button class="btn primary cta" data-a="add">Catat transaksi</button>' : '')}</section>`;
 }
-function viewTransaksi() {
-  const key = state.month, mt = monthTotals(key);
-  const list = db.transactions.filter(t => String(t.date).startsWith(key)).sort(cmpTx);
+function txHay(t) {
+  if (t.type === 'goal' || t.type === 'debt') {
+    const g = t.type === 'goal' ? goalById(t.goalId) : debtById(t.debtId), w = wallet(t.walletId);
+    return [t.type === 'goal' ? 'goal tabungan' : 'hutang piutang', g ? (g.name || g.party) : '', w ? w.name : '', t.note || '', String(amt(t))].join(' ').toLowerCase();
+  }
+  const c = category(t.categoryId), w = wallet(t.walletId), w2 = wallet(t.toWalletId);
+  return [t.type === 'transfer' ? 'transfer' : (c ? c.name : 'tanpa kategori'), w ? w.name : '', w2 ? w2.name : '', t.note || '', String(amt(t))].join(' ').toLowerCase();
+}
+function txMatch(t) {
+  if (state.tf === 'in' && !(t.type === 'in')) return false;
+  if (state.tf === 'out' && !(t.type === 'out')) return false;
+  if (state.tf === 'tr' && !(t.type === 'transfer')) return false;
+  if (state.tf === 'plan' && !(t.type === 'goal' || t.type === 'debt')) return false;
+  const q = state.q.trim().toLowerCase().replace(/^rp\s*/, '').replace(/\./g, '');
+  return !q || txHay(t).includes(q) || txHay(t).includes(state.q.trim().toLowerCase());
+}
+function txListHTML() {
+  const key = state.month, all = db.transactions.filter(t => String(t.date).startsWith(key));
+  const list = all.filter(txMatch).sort(cmpTx);
+  if (!all.length) return `<div class="sec">${empty('📝', 'w2', 'Belum ada transaksi bulan ini', 'Ketuk tombol + untuk mencatat pemasukan, pengeluaran, atau transfer antar dompet.', '<button class="btn primary cta" data-a="add">Catat transaksi</button>')}</div>`;
+  if (!list.length) return `<div class="sec">${empty('🔍', 'w1', 'Tidak ada yang cocok', 'Coba kata kunci lain atau ganti filter jenis.', '<button class="btn cta" data-a="tx-clear">Hapus pencarian</button>')}</div>`;
   let body = '', last = '';
   for (const t of list) {
     if (t.date !== last) { body += `${last ? '</div>' : ''}<p class="day">${esc(dayLabel(t.date))}</p><div class="txl">`; last = t.date; }
     body += txRow(t);
   }
-  if (last) body += '</div>';
+  return body + '</div>';
+}
+function viewTransaksi() {
+  const key = state.month, mt = monthTotals(key);
+  const has = db.transactions.some(t => String(t.date).startsWith(key));
+  const tf = [['all', 'Semua'], ['in', 'Masuk'], ['out', 'Keluar'], ['tr', 'Transfer'], ['plan', 'Goal & hutang']];
   return `
   <header class="top"><h1>Transaksi</h1></header>
   <div class="monthbar"><button data-a="month" data-v="-1" aria-label="Bulan sebelumnya">${svg('left', 'width="20" height="20"')}</button><span class="m">${esc(monthLabel(key))}</span><button data-a="month" data-v="1" aria-label="Bulan berikutnya">${svg('right', 'width="20" height="20"')}</button></div>
   ${flowCards(mt.i, mt.o)}
-  ${list.length ? body : `<div class="sec">${empty('📝', 'w2', 'Belum ada transaksi bulan ini', 'Ketuk tombol + untuk mencatat pemasukan, pengeluaran, atau transfer antar dompet.', '<button class="btn primary cta" data-a="add">Catat transaksi</button>')}</div>`}`;
+  ${has ? `<div class="srch"><input id="q" type="search" enterkeyhint="search" autocomplete="off" placeholder="Cari kategori, catatan, nominal" aria-label="Cari transaksi" value="${esc(state.q)}"></div>
+  <div class="chips tfs" role="group" aria-label="Filter jenis">${tf.map(([v, l]) => `<button type="button" class="pick" data-a="tf" data-v="${v}" aria-pressed="${state.tf === v}">${l}</button>`).join('')}</div>` : ''}
+  <div id="txlist">${txListHTML()}</div>`;
 }
 function viewAnalisis() {
   const key = state.month, mt = monthTotals(key), net = mt.i - mt.o, ranked = rankedCats(key), brows = budgetRows(key);
@@ -656,6 +784,28 @@ function viewAnalisis() {
     ${brows.length ? `<div class="panel">${brows.map(meter).join('')}<button class="btn cta" data-a="budget-list">Atur budget</button></div>`
       : empty('🎯', 'w1', 'Belum ada budget', 'Tetapkan batas pengeluaran bulanan per kategori, dan kamu diingatkan saat hampir habis.', '<button class="btn primary cta" data-a="budget-list">Atur budget</button>')}</section>`;
 }
+function goalsHTML() {
+  if (!db.goals.length) return empty('🎯', 'w1', 'Belum ada goal', 'Mau nabung buat apa? Dana darurat, liburan, atau gadget baru, tetapkan targetnya di sini.', '<button class="btn primary cta" data-a="goal-add">Tambah goal</button>');
+  const infos = db.goals.map(g => [g, goalInfo(g)]);
+  const saved = infos.reduce((x, [, i]) => x + i.saved, 0), target = infos.reduce((x, [, i]) => x + i.target, 0);
+  return `<div class="sumline"><span>Dana di goal</span><b>${rupiah(saved)} <span style="font-weight:600;color:var(--muted)">dari ${rupiah(target)}</span></b></div>
+    ${infos.map(([g, i]) => gcard('goal-open', g.id, g.icon, g.name, '', `${rupiah(i.saved)} dari ${rupiah(i.target)}`, i)).join('')}
+    <div class="addbar"><button class="btn" data-a="goal-add">Tambah goal</button></div>`;
+}
+function debtsHTML() {
+  if (!db.debts.length) return empty('🤝', 'w2', 'Belum ada hutang atau piutang', 'Catat uang yang kamu pinjam atau pinjamkan, lengkap dengan cicilan dan jatuh tempo.', '<button class="btn primary cta" data-a="debt-add">Tambah catatan</button>');
+  const infos = db.debts.map(d => [d, debtInfo(d)]);
+  const owe = infos.filter(([d]) => d.kind === 'owe').reduce((x, [, i]) => x + i.rem, 0), lent = infos.filter(([d]) => d.kind === 'lent').reduce((x, [, i]) => x + i.rem, 0);
+  const open = infos.filter(([, i]) => i.rem > 0).sort((a, b) => (a[0].dueDate || '9999') < (b[0].dueDate || '9999') ? -1 : 1), done = infos.filter(([, i]) => i.rem <= 0);
+  const card = ([d, i]) => gcard('debt-open', d.id, '🤝', d.party, d.kind === 'owe' ? 'Hutang' : 'Piutang', `${rupiah(i.paid)} dari ${rupiah(i.total)}`, i);
+  return `<section class="flow" aria-label="Ringkasan hutang dan piutang">
+      <div class="fc out"><p class="fk">Hutangmu</p><p class="fv">${rupiah(owe)}</p></div>
+      <div class="fc in"><p class="fk">Piutangmu</p><p class="fv">${rupiah(lent)}</p></div></section>
+    <div style="height:16px"></div>
+    ${open.length ? open.map(card).join('') : '<p class="hint">Semua sudah lunas. 🎉</p>'}
+    ${done.length ? `<details class="done"><summary>Lunas (${done.length})</summary>${done.map(card).join('')}</details>` : ''}
+    <div class="addbar"><button class="btn" data-a="debt-add">Tambah catatan</button></div>`;
+}
 function viewRencana() {
   const g = state.plan === 'goal';
   return `
@@ -663,8 +813,7 @@ function viewRencana() {
   <div class="seg full" role="group" aria-label="Jenis rencana">
     <button data-a="plan" data-v="goal" aria-pressed="${g}">Goal</button>
     <button data-a="plan" data-v="debt" aria-pressed="${!g}">Hutang</button></div>
-  ${g ? empty('🎯', 'w1', 'Belum ada goal', 'Mau nabung buat apa? Dana darurat, liburan, atau gadget baru, tetapkan targetnya di sini.')
-      : empty('🤝', 'w2', 'Belum ada hutang atau piutang', 'Catat uang yang kamu pinjam atau pinjamkan, lengkap dengan cicilan dan jatuh tempo.')}`;
+  ${g ? goalsHTML() : debtsHTML()}`;
 }
 function viewPengaturan() {
   const th = db.settings.theme, c = counts(db), recs = c.wallets + c.transactions + c.budgets + c.goals + c.debts;
@@ -691,6 +840,7 @@ function viewPengaturan() {
   </div></section>
   <section class="group"><h2>Data</h2><div class="card">
     <div class="row"><div><p class="t">Ekspor cadangan</p><p class="d">Cadangan terakhir: ${esc(last)}</p></div><div class="r"><button class="btn small primary" data-a="export">Ekspor</button></div></div>
+    <div class="row"><div><p class="t">Ekspor ke CSV</p><p class="d">Semua transaksi untuk dibuka di Excel atau Sheets</p></div><div class="r"><button class="btn small" data-a="export-csv">CSV</button></div></div>
     <div class="row"><div><p class="t">Impor cadangan</p><p class="d">Ganti data dengan file cadangan .json</p></div><div class="r"><button class="btn small" data-a="import">Pilih file</button></div></div>
     <div class="row"><div><p class="t">Isi penyimpanan</p><p class="d">${recs} catatan, ${c.categories} kategori, ${nf1.format(byteSize() / 1024)} KB</p></div></div>
     <div class="row"><div><p class="t">Perlindungan data</p><p class="d">${esc(persistTxt)}</p></div>${state.persisted === false ? '<div class="r"><button class="btn small" data-a="persist">Minta</button></div>' : ''}</div>
@@ -765,7 +915,8 @@ const formActions = edit => `<p class="err" id="f-err" role="alert"></p>
   <div class="sheet-actions">${edit ? '<button type="button" class="btn danger" data-a="f-del">Hapus</button>' : ''}<button type="button" class="btn primary" data-a="f-save">Simpan</button></div>`;
 
 function showForm() {
-  bodyEl.innerHTML = form.kind === 'tx' ? txFormHTML() : form.kind === 'wallet' ? walletFormHTML() : form.kind === 'budget' ? budgetFormHTML() : catFormHTML();
+  const FORMS = { tx: txFormHTML, wallet: walletFormHTML, budget: budgetFormHTML, cat: catFormHTML, goal: goalFormHTML, goalmove: goalMoveFormHTML, debt: debtFormHTML, debtpay: debtPayFormHTML };
+  bodyEl.innerHTML = (FORMS[form.kind] || catFormHTML)();
 }
 
 /* -- transaksi -- */
@@ -919,6 +1070,181 @@ function showBudgetList() {
     <div class="sheet-actions"><button class="btn primary" data-a="sheet-no">Selesai</button></div>`);
 }
 
+
+/* -- goal -- */
+function goalFormHTML() {
+  const f = form, edit = !!f.id;
+  return `<h2 id="sheet-title">${edit ? 'Ubah goal' : 'Tambah goal'}</h2>
+  <div class="fld"><label for="f-name">Nama goal</label><input id="f-name" type="text" maxlength="30" placeholder="Mis. Dana darurat, Liburan" value="${esc(f.name)}"></div>
+  <div class="fld"><label for="f-target">Target dana</label><div class="amt sm"><b>Rp</b><input id="f-target" inputmode="numeric" autocomplete="off" placeholder="0" value="${f.target ? nf.format(f.target) : ''}"></div></div>
+  <div class="fld"><label for="f-due">Target tanggal (opsional)</label><input id="f-due" type="date" value="${esc(f.due)}"></div>
+  <div class="fld"><span>Ikon</span><div class="emojis">${GOAL_EMOJI.map(e => `<button type="button" class="em" data-a="f-emoji" data-v="${esc(e)}" aria-pressed="${f.icon === e}" aria-label="Ikon ${esc(e)}">${esc(e)}</button>`).join('')}</div></div>
+  ${formActions(edit)}`;
+}
+function openGoal(id) {
+  const g = id ? goalById(id) : null; if (id && !g) return;
+  resetForm({ kind: 'goal', id: g ? g.id : null, name: g ? g.name : '', target: g ? Number(g.target) || 0 : 0, due: g && g.deadline ? g.deadline : '', icon: g ? g.icon : '🎯', returnTo: null });
+  setSheet(goalFormHTML());
+  if (!g) setTimeout(() => { const el = $('#f-name'); if (el) el.focus(); }, 380);
+}
+function saveGoal() {
+  const f = form, name = f.name.trim();
+  if (!name) return setErr('Beri nama goalnya dulu.');
+  if (!(f.target > 0)) return setErr('Isi target dana dulu.');
+  if (f.due && !validDate(f.due)) return setErr('Tanggal target belum benar.');
+  commit(d => {
+    if (f.id) { const g = d.goals.find(x => x.id === f.id); if (g) { g.name = name; g.target = f.target; g.icon = f.icon; g.deadline = f.due || ''; } }
+    else d.goals.push({ id: uid(), name, target: f.target, saved: 0, icon: f.icon, deadline: f.due || '', createdAt: nowISO() });
+  });
+  finishForm(f.id ? 'Goal diperbarui' : 'Goal ditambahkan');
+}
+function showGoalActions(id) {
+  const g = goalById(id); if (!g) return; const i = goalInfo(g);
+  resetForm({ kind: 'goalact' });
+  setSheet(`<h2 id="sheet-title">${esc(g.icon)} ${esc(g.name)}</h2>
+    <p class="hint">${rupiah(i.saved)} dari ${rupiah(i.target)} (${Math.round(i.pct * 100)}%). ${i.pct >= 1 ? 'Goal tercapai!' : 'Sisa ' + rupiah(i.rem) + '.'}</p>
+    <div class="stack"><button class="btn primary" data-a="goal-dep" data-id="${esc(id)}">Setor dana</button>
+      <button class="btn" data-a="goal-wd" data-id="${esc(id)}" ${i.saved > 0 ? '' : 'disabled'}>Tarik dana</button>
+      <button class="btn" data-a="goal-edit" data-id="${esc(id)}">Ubah goal</button></div>`);
+}
+function goalMoveFormHTML() {
+  const f = form, g = goalById(f.goalId), dep = f.dir === 'deposit', i = goalInfo(g);
+  const ws = db.wallets.map(w => [w.id, w.name, wEmoji(w.type)]);
+  return `<h2 id="sheet-title">${f.id ? 'Ubah' : ''} ${dep ? 'Setor ke' : 'Tarik dari'} ${esc(g.name)}</h2>
+  <p class="hint">Terkumpul ${rupiah(i.saved)} dari ${rupiah(i.target)}. ${dep ? 'Uang dipindahkan dari dompet ke goal.' : 'Uang dikembalikan dari goal ke dompet.'}</p>
+  <div class="amt"><b>Rp</b><input id="f-amount" inputmode="numeric" autocomplete="off" placeholder="0" aria-label="Nominal" value="${f.amount ? nf.format(f.amount) : ''}"></div>
+  <div class="fld"><span>${dep ? 'Dari dompet' : 'Ke dompet'}</span>${chips(ws, f.walletId, 'f-wallet')}</div>
+  <div class="fld"><label for="f-date">Tanggal</label><input id="f-date" type="date" value="${esc(f.date)}"></div>
+  <div class="fld"><label for="f-note">Catatan (opsional)</label><input id="f-note" type="text" maxlength="80" value="${esc(f.note)}"></div>
+  ${formActions(!!f.id)}`;
+}
+function openGoalMove(goalId, dir, txId) {
+  const g = goalById(goalId); if (!g) return toast('Goal untuk catatan ini sudah dihapus.');
+  if (!db.wallets.length) return openWallet(null, 'Buat dompet dulu supaya bisa menyetor ke goal.');
+  const t = txId ? db.transactions.find(x => x.id === txId) : null;
+  const last = db.settings.lastWalletId && wallet(db.settings.lastWalletId) ? db.settings.lastWalletId : db.wallets[0].id;
+  resetForm({ kind: 'goalmove', id: t ? t.id : null, goalId, dir, amount: t ? amt(t) : 0, walletId: t && wallet(t.walletId) ? t.walletId : last, date: t ? t.date : ymd(), note: (t && t.note) || '', returnTo: null });
+  setSheet(goalMoveFormHTML());
+  if (!t) setTimeout(() => { const el = $('#f-amount'); if (el) el.focus(); }, 380);
+}
+function saveGoalMove() {
+  const f = form, g = goalById(f.goalId);
+  if (!(f.amount > 0)) return setErr('Isi nominal dulu.');
+  if (!wallet(f.walletId)) return setErr('Pilih dompet dulu.');
+  if (!validDate(f.date)) return setErr('Isi tanggal dulu.');
+  const before = goalSaved(f.goalId);
+  if (f.dir === 'withdraw') { const avail = goalSaved(f.goalId, f.id); if (f.amount > avail) return setErr(`Dana di goal hanya ${rupiah(avail)}.`); }
+  const rec = { type: 'goal', goalId: f.goalId, dir: f.dir, flow: f.dir === 'deposit' ? 'out' : 'in', amount: f.amount, walletId: f.walletId, date: f.date, note: f.note.trim() };
+  commit(d => {
+    if (f.id) { const i = d.transactions.findIndex(x => x.id === f.id); if (i >= 0) { const o = d.transactions[i]; d.transactions[i] = Object.assign({ id: o.id, createdAt: o.createdAt }, rec); } }
+    else d.transactions.push(Object.assign({ id: uid(), createdAt: nowISO() }, rec));
+    d.settings.lastWalletId = f.walletId;
+  });
+  const after = goalSaved(f.goalId), target = Number(g.target) || 0;
+  let msg = f.dir === 'deposit' ? 'Setoran tersimpan' : 'Penarikan tersimpan';
+  if (f.dir === 'deposit' && before < target && after >= target) msg = `Selamat! Goal ${g.name} tercapai 🎉`;
+  finishForm(msg);
+}
+
+/* -- hutang & piutang -- */
+function debtFormHTML() {
+  const f = form, edit = !!f.id, owe = f.dkind === 'owe';
+  const ws = [['', 'Tidak dicatat', '🚫'], ...db.wallets.map(w => [w.id, w.name, wEmoji(w.type)])];
+  return `<h2 id="sheet-title">${edit ? 'Ubah catatan' : 'Tambah hutang atau piutang'}</h2>
+  ${edit ? '' : `<div class="seg full" role="group" aria-label="Jenis catatan">${[['owe', 'Hutang saya'], ['lent', 'Piutang']].map(([v, l]) => `<button type="button" data-a="f-dkind" data-v="${v}" aria-pressed="${f.dkind === v}">${l}</button>`).join('')}</div>`}
+  <div class="fld"><label for="f-name">${owe ? 'Berhutang kepada' : 'Yang berhutang kepadamu'}</label><input id="f-name" type="text" maxlength="30" placeholder="Nama orang atau tempat" value="${esc(f.name)}"></div>
+  <div class="fld"><label for="f-amount">Jumlah</label><div class="amt sm"><b>Rp</b><input id="f-amount" inputmode="numeric" autocomplete="off" placeholder="0" value="${f.amount ? nf.format(f.amount) : ''}"></div></div>
+  <div class="fld"><label for="f-due">Jatuh tempo (opsional)</label><input id="f-due" type="date" value="${esc(f.due)}"></div>
+  <div class="fld"><label for="f-note">Catatan (opsional)</label><input id="f-note" type="text" maxlength="80" value="${esc(f.note)}"></div>
+  ${edit || !db.wallets.length ? '' : `<div class="fld"><span>Catat uangnya ke dompet</span>${chips(ws, f.walletId, 'f-wallet')}<p class="hint">${owe ? 'Pilih dompet yang menerima uang pinjaman, supaya saldo ikut bertambah.' : 'Pilih dompet asal uang yang kamu pinjamkan, supaya saldo ikut berkurang.'} Pilih "Tidak dicatat" untuk catatan lama.</p></div>`}
+  ${formActions(edit)}`;
+}
+function openDebt(id) {
+  const d = id ? debtById(id) : null; if (id && !d) return toast('Catatan ini sudah dihapus.');
+  const last = db.settings.lastWalletId && wallet(db.settings.lastWalletId) ? db.settings.lastWalletId : (db.wallets[0] ? db.wallets[0].id : '');
+  resetForm({ kind: 'debt', id: d ? d.id : null, dkind: d ? d.kind : 'owe', name: d ? d.party : '', amount: d ? Number(d.total) || 0 : 0, due: d && d.dueDate ? d.dueDate : '', note: (d && d.note) || '', walletId: last, returnTo: null });
+  setSheet(debtFormHTML());
+  if (!d) setTimeout(() => { const el = $('#f-name'); if (el) el.focus(); }, 380);
+}
+function saveDebt() {
+  const f = form, party = f.name.trim();
+  if (!party) return setErr('Isi nama orangnya dulu.');
+  if (!(f.amount > 0)) return setErr('Isi jumlahnya dulu.');
+  if (f.due && !validDate(f.due)) return setErr('Tanggal jatuh tempo belum benar.');
+  if (f.id) { const paid = debtPaid(f.id); if (f.amount < paid) return setErr(`Jumlah tidak boleh kurang dari yang sudah dibayar (${rupiah(paid)}).`); }
+  commit(d => {
+    if (f.id) {
+      const x = d.debts.find(y => y.id === f.id);
+      if (x) { x.party = party; x.total = f.amount; x.dueDate = f.due || ''; x.note = f.note.trim(); }
+      for (const t of d.transactions) if (t.type === 'debt' && t.debtId === f.id && t.role === 'start') t.amount = f.amount;
+    } else {
+      const id = uid();
+      d.debts.push({ id, kind: f.dkind, party, total: f.amount, dueDate: f.due || '', note: f.note.trim(), createdAt: nowISO() });
+      if (f.walletId && d.wallets.some(w => w.id === f.walletId))
+        d.transactions.push({ id: uid(), createdAt: nowISO(), type: 'debt', role: 'start', debtId: id, flow: f.dkind === 'owe' ? 'in' : 'out', amount: f.amount, walletId: f.walletId, date: ymd(), note: '' });
+    }
+  });
+  finishForm(f.id ? 'Catatan diperbarui' : 'Catatan ditambahkan');
+}
+function showDebtActions(id) {
+  const d = debtById(id); if (!d) return; const i = debtInfo(d), owe = d.kind === 'owe';
+  resetForm({ kind: 'debtact' });
+  setSheet(`<h2 id="sheet-title">🤝 ${esc(d.party)}</h2>
+    <p class="hint">${owe ? 'Hutangmu' : 'Piutangmu'}: ${rupiah(i.paid)} dari ${rupiah(i.total)} sudah ${owe ? 'dibayar' : 'diterima'}. ${i.rem > 0 ? 'Sisa ' + rupiah(i.rem) + '.' : 'Sudah lunas.'}${d.note ? ' Catatan: ' + esc(d.note) : ''}</p>
+    <div class="stack"><button class="btn primary" data-a="debt-pay" data-id="${esc(id)}" ${i.rem > 0 ? '' : 'disabled'}>${owe ? 'Catat pembayaran' : 'Catat uang diterima'}</button>
+      <button class="btn" data-a="debt-edit" data-id="${esc(id)}">Ubah catatan</button></div>`);
+}
+function debtPayFormHTML() {
+  const f = form, d = debtById(f.debtId), owe = d.kind === 'owe';
+  const ws = db.wallets.map(w => [w.id, w.name, wEmoji(w.type)]);
+  return `<h2 id="sheet-title">${f.id ? 'Ubah' : 'Catat'} ${owe ? 'pembayaran' : 'uang diterima'}</h2>
+  <p class="hint">${esc(d.party)} · sisa ${rupiah(f.fill)}</p>
+  <div class="amt"><b>Rp</b><input id="f-amount" inputmode="numeric" autocomplete="off" placeholder="0" aria-label="Nominal" value="${f.amount ? nf.format(f.amount) : ''}"></div>
+  <div class="chips" style="margin-top:10px"><button type="button" class="pick" data-a="f-fill">${owe ? 'Lunasi semua' : 'Terima semua'}</button></div>
+  <div class="fld"><span>${owe ? 'Dibayar dari dompet' : 'Masuk ke dompet'}</span>${chips(ws, f.walletId, 'f-wallet')}</div>
+  <div class="fld"><label for="f-date">Tanggal</label><input id="f-date" type="date" value="${esc(f.date)}"></div>
+  <div class="fld"><label for="f-note">Catatan (opsional)</label><input id="f-note" type="text" maxlength="80" value="${esc(f.note)}"></div>
+  ${formActions(!!f.id)}`;
+}
+function openDebtPay(debtId, txId) {
+  const d = debtById(debtId); if (!d) return toast('Catatan hutang untuk transaksi ini sudah dihapus.');
+  if (!db.wallets.length) return openWallet(null, 'Buat dompet dulu supaya pembayaran bisa dicatat.');
+  const t = txId ? db.transactions.find(x => x.id === txId) : null;
+  const last = db.settings.lastWalletId && wallet(db.settings.lastWalletId) ? db.settings.lastWalletId : db.wallets[0].id;
+  const fill = Math.max(0, (Number(d.total) || 0) - debtPaid(debtId, txId));
+  resetForm({ kind: 'debtpay', id: t ? t.id : null, debtId, fill, amount: t ? amt(t) : 0, walletId: t && wallet(t.walletId) ? t.walletId : last, date: t ? t.date : ymd(), note: (t && t.note) || '', returnTo: null });
+  setSheet(debtPayFormHTML());
+  if (!t) setTimeout(() => { const el = $('#f-amount'); if (el) el.focus(); }, 380);
+}
+function saveDebtPay() {
+  const f = form, d = debtById(f.debtId), owe = d.kind === 'owe';
+  if (!(f.amount > 0)) return setErr('Isi nominal dulu.');
+  if (f.amount > f.fill) return setErr(`Melebihi sisa (${rupiah(f.fill)}).`);
+  if (!wallet(f.walletId)) return setErr('Pilih dompet dulu.');
+  if (!validDate(f.date)) return setErr('Isi tanggal dulu.');
+  const rec = { type: 'debt', role: 'pay', debtId: f.debtId, flow: owe ? 'out' : 'in', amount: f.amount, walletId: f.walletId, date: f.date, note: f.note.trim() };
+  commit(x => {
+    if (f.id) { const i = x.transactions.findIndex(y => y.id === f.id); if (i >= 0) { const o = x.transactions[i]; x.transactions[i] = Object.assign({ id: o.id, createdAt: o.createdAt }, rec); } }
+    else x.transactions.push(Object.assign({ id: uid(), createdAt: nowISO() }, rec));
+    x.settings.lastWalletId = f.walletId;
+  });
+  finishForm(debtInfo(d).rem <= 0 ? 'Lunas! 🎉' : (owe ? 'Pembayaran tersimpan' : 'Penerimaan tersimpan'));
+}
+function removeLinked(list, id, msg, match) {
+  const arr = db[list], i = arr.findIndex(x => x.id === id); if (i < 0) return;
+  const [item] = arr.splice(i, 1), rel = db.transactions.filter(match);
+  db.transactions = db.transactions.filter(t => !match(t));
+  db.meta.updatedAt = nowISO(); persist();
+  closeSheet(false); render();
+  toast(msg, { label: 'Urungkan', fn: () => { commit(d => { d[list].splice(Math.min(i, d[list].length), 0, item); d.transactions.push(...rel); }); render(); } });
+}
+function openTxAny(id) {
+  const t = db.transactions.find(x => x.id === id); if (!t) return;
+  if (t.type === 'goal') return openGoalMove(t.goalId, t.dir, t.id);
+  if (t.type === 'debt') return t.role === 'start' ? openDebt(t.debtId) : openDebtPay(t.debtId, t.id);
+  openTx(id);
+}
+
 /* -- bersama -- */
 function finishForm(msg) {
   if (form.returnTo === 'catlist') showCatList(); else if (form.returnTo === 'budgetlist') showBudgetList(); else closeSheet(false);
@@ -932,12 +1258,15 @@ function removeItem(list, id, msg) {
   render();
   toast(msg, { label: 'Urungkan', fn: () => { commit(d => { d[list].splice(Math.min(i, d[list].length), 0, item); }); render(); } });
 }
-function saveForm() { if (form.kind === 'tx') saveTx(); else if (form.kind === 'wallet') saveWallet(); else if (form.kind === 'cat') saveCat(); else if (form.kind === 'budget') saveBudget(); }
+function saveForm() { if (form.kind === 'tx') saveTx(); else if (form.kind === 'wallet') saveWallet(); else if (form.kind === 'cat') saveCat(); else if (form.kind === 'budget') saveBudget(); else if (form.kind === 'goal') saveGoal(); else if (form.kind === 'goalmove') saveGoalMove(); else if (form.kind === 'debt') saveDebt(); else if (form.kind === 'debtpay') saveDebtPay(); }
 function deleteForm() {
   const f = form;
   if (f.kind === 'tx') return removeItem('transactions', f.id, 'Transaksi dihapus');
   if (f.kind === 'wallet') { const n = usedWallet(f.id); if (n) return setErr(`Dompet ini dipakai di ${n} transaksi, jadi belum bisa dihapus.`); return removeItem('wallets', f.id, 'Dompet dihapus'); }
   if (f.kind === 'budget') return removeItem('budgets', f.id, 'Budget dihapus');
+  if (f.kind === 'goalmove' || f.kind === 'debtpay') return removeItem('transactions', f.id, 'Catatan dihapus');
+  if (f.kind === 'goal') { const sv = goalSaved(f.id); if (sv > 0) return setErr(`Masih ada ${rupiah(sv)} di goal ini. Tarik dananya dulu.`); return removeLinked('goals', f.id, 'Goal dihapus', t => t.type === 'goal' && t.goalId === f.id); }
+  if (f.kind === 'debt') return removeLinked('debts', f.id, 'Catatan dihapus', t => t.type === 'debt' && t.debtId === f.id);
   if (f.kind === 'cat') { const n = usedCat(f.id); if (n) return setErr(`Kategori ini dipakai di ${n} transaksi, jadi belum bisa dihapus.`); if (db.budgets.some(b => b.categoryId === f.id)) return setErr('Kategori ini punya budget. Hapus budgetnya dulu.'); return removeItem('categories', f.id, 'Kategori dihapus'); }
 }
 
@@ -947,6 +1276,24 @@ function undo() {
   const raw = lsGet(PREV); if (!raw) return toast('Tidak ada yang bisa diurungkan');
   try { db = normalize(JSON.parse(raw)); persist(); applyTheme(); render(); toast('Dikembalikan seperti semula'); }
   catch (e) { toast('Gagal mengurungkan'); }
+}
+function csvCell(v) { v = String(v == null ? '' : v); return /[",;\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+function exportCSV() {
+  const rows = [['Tanggal', 'Jenis', 'Kategori / Tujuan', 'Dompet', 'Ke dompet', 'Nominal', 'Catatan']];
+  const jenis = { in: 'Pemasukan', out: 'Pengeluaran', transfer: 'Transfer', goal: 'Goal', debt: 'Hutang/Piutang' };
+  for (const t of [...db.transactions].sort(cmpTx).reverse()) {
+    const c = category(t.categoryId), w = wallet(t.walletId), w2 = wallet(t.toWalletId);
+    let tujuan = c ? c.name : '';
+    if (t.type === 'goal') { const g = goalById(t.goalId); tujuan = (g ? g.name : '') + (t.dir === 'withdraw' ? ' (tarik)' : ' (setor)'); }
+    if (t.type === 'debt') { const d = debtById(t.debtId); tujuan = (d ? d.party : '') + (t.role === 'start' ? ' (awal)' : ' (cicilan)'); }
+    const signed = (t.type === 'in' || ((t.type === 'goal' || t.type === 'debt') && t.flow === 'in')) ? amt(t) : (t.type === 'transfer' ? amt(t) : -amt(t));
+    rows.push([t.date, jenis[t.type] || t.type, tujuan, w ? w.name : '', w2 ? w2.name : '', signed, t.note || '']);
+  }
+  const csv = '\ufeff' + rows.map(r => r.map(csvCell).join(',')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = `kasku-transaksi-${ymd()}.csv`;
+  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  toast('File CSV diunduh. Bisa dibuka di Excel atau Google Sheets.');
 }
 function exportData() {
   commit(d => { d.meta.lastBackupAt = nowISO(); });
@@ -1003,7 +1350,22 @@ document.addEventListener('click', e => {
   const v = el.dataset.v, id = el.dataset.id;
   switch (el.dataset.a) {
     case 'add': openTx(); break;
-    case 'tx-edit': openTx(id); break;
+    case 'tx-edit': openTxAny(id); break;
+    case 'goal-add': openGoal(); break;
+    case 'goal-open': showGoalActions(id); break;
+    case 'goal-edit': openGoal(id); break;
+    case 'goal-dep': openGoalMove(id, 'deposit'); break;
+    case 'goal-wd': openGoalMove(id, 'withdraw'); break;
+    case 'debt-add': openDebt(); break;
+    case 'debt-open': showDebtActions(id); break;
+    case 'debt-edit': openDebt(id); break;
+    case 'debt-pay': openDebtPay(id); break;
+    case 'export-csv': exportCSV(); break;
+    case 'tf': state.tf = v; render(); break;
+    case 'tx-clear': state.q = ''; state.tf = 'all'; render(); break;
+    case 'go-debt': state.plan = 'debt'; location.hash = '#/rencana'; break;
+    case 'f-dkind': form.dkind = v; showForm(); break;
+    case 'f-fill': form.amount = form.fill; showForm(); break;
     case 'wallet-add': openWallet(); break;
     case 'wallet-edit': openWallet(id); break;
     case 'cat-list': showCatList(); break;
@@ -1036,18 +1398,20 @@ document.addEventListener('click', e => {
 });
 const onInput = e => {
   const t = e.target, id = t.id;
-  if (id === 'f-amount' || id === 'f-open' || id === 'f-limit') {
+  if (id === 'q') { if (state.q === t.value) return; state.q = t.value; const l = $('#txlist'); if (l) l.innerHTML = txListHTML(); return; }
+  if (id === 'f-amount' || id === 'f-open' || id === 'f-limit' || id === 'f-target') {
     const digits = t.value.replace(/\D/g, '').slice(0, 12), n = digits ? Number(digits) : 0;
-    t.value = digits ? nf.format(n) : ''; form[id === 'f-amount' ? 'amount' : id === 'f-limit' ? 'limit' : 'opening'] = n;
+    t.value = digits ? nf.format(n) : ''; form[id === 'f-amount' ? 'amount' : id === 'f-limit' ? 'limit' : id === 'f-target' ? 'target' : 'opening'] = n;
   } else if (id === 'f-note') form.note = t.value;
   else if (id === 'f-date') form.date = t.value;
+  else if (id === 'f-due') form.due = t.value;
   else if (id === 'f-name') form.name = t.value;
 };
 document.addEventListener('input', onInput);
 document.addEventListener('change', onInput);
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && !wrap.hidden) closeSheet(false);
-  else if (e.key === 'Enter' && ['f-note', 'f-name', 'f-amount', 'f-open', 'f-limit'].includes(e.target.id)) { e.preventDefault(); saveForm(); }
+  else if (e.key === 'Enter' && ['f-note', 'f-name', 'f-amount', 'f-open', 'f-limit', 'f-target'].includes(e.target.id)) { e.preventDefault(); saveForm(); }
 });
 $('#file').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; importFile(f); });
 addEventListener('hashchange', render);
@@ -1064,6 +1428,8 @@ if (navigator.storage && navigator.storage.persisted) {
   });
 }
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  const had = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (had) toast('Versi baru Kasku siap. Tutup dan buka lagi untuk memakainya.'); });
   addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
 })();

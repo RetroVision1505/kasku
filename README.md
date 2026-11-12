@@ -2,7 +2,7 @@
 
 Pencatat keuangan pribadi berbasis PWA. Data tersimpan di perangkat (localStorage), bisa diekspor/diimpor sebagai JSON, dan jalan offline.
 
-Status: **Tahap 3**. Dompet, kategori, pencatatan transaksi, daftar per bulan, analisis (peringkat kategori, tren 6 bulan), dan budget per kategori sudah jalan. Goal dan hutang menyusul.
+Status: **Tahap 5**. Dompet, kategori, pencatatan transaksi, daftar per bulan, analisis (peringkat kategori, tren 6 bulan), dan budget per kategori sudah jalan. Goal tabungan serta hutang dan piutang juga sudah jalan. Tahap 5 menambah pencarian, filter, dan ekspor CSV.
 
 ## Pasang ke GitHub Pages
 
